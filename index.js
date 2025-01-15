@@ -103,16 +103,22 @@ app.post('/api/kategoriler-ekle', (req, res) => {
 
     res.json({ success: true });
 });
+// Kategorileri Listeleme
 app.get('/api/kategoriler', (req, res) => {
     const { apiKey } = req.query;
+
+    // API anahtarını doğrula
     const topluluk = dogrulaApiAnahtari(apiKey);
     if (!topluluk) {
         return res.status(403).json({ error: 'Geçersiz API anahtarı!' });
     }
+
+    // Kategorileri döndür
     const data = JSON.parse(fs.readFileSync(DATA_FILE));
     const kategoriler = data.kategoriler[topluluk.isim] || [];
     res.json(kategoriler);
 });
+
 
 // 4. Blog Silme
 app.post('/api/blog-sil', (req, res) => {
