@@ -5,17 +5,14 @@ const fs = require('fs');
 
 // Uygulama ayarları
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const DATA_FILE = 'data.json';
 
-// Middleware'ler
+// Middleware (JSON verileri okumak ve CORS desteği sağlamak için)
 app.use(bodyParser.json());
 app.use(cors());
-app.get('/', (req, res) => {
-    res.send('Merhaba! API çalışıyor. Lütfen /api/bloglar rotasını deneyin.');
-});
 
-// Eğer data.json yoksa bir tane oluştur
+// Eğer data.json yoksa, bir başlangıç dosyası oluştur
 if (!fs.existsSync(DATA_FILE)) {
     fs.writeFileSync(DATA_FILE, JSON.stringify({ topluluklar: [], bloglar: [] }, null, 2));
 }
@@ -26,70 +23,81 @@ function dogrulaApiAnahtari(apiKey) {
     return data.topluluklar.find(topluluk => topluluk.apiKey === apiKey);
 }
 
-// Topluluk ekleme (manuel bir topluluk eklemek için endpoint)
-app.post('/api/topluluk-ekle', (req, res) => {
-    const { isim, apiKey } = req.body;
-    if (!isim || !apiKey) return res.status(400).json({ error: 'İsim ve API anahtarı gerekli!' });
-
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    data.topluluklar.push({ isim, apiKey });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    res.json({ success: true, topluluk: { isim, apiKey } });
-});
-
-// Blog ekleme
-app.post('/api/blog-ekle', (req, res) => {
-    const { apiKey, baslik, icerik } = req.body;
-
-    if (!apiKey || !baslik || !icerik) {
-        return res.status(400).json({ error: 'API anahtarı, başlık ve içerik gerekli!' });
-    }
-
+// 1. API Anahtarı ile Giriş (Doğrulama)
+app.post('/api/auth', (req, res) => {
+    const { apiKey } = req.body;
     const topluluk = dogrulaApiAnahtari(apiKey);
     if (!topluluk) {
         return res.status(403).json({ error: 'Geçersiz API anahtarı!' });
     }
-
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    const yeniBlog = {
-        id: data.bloglar.length + 1,
-        toplulukIsim: topluluk.isim,
-        baslik,
-        icerik,
-        tarih: new Date().toISOString(),
-    };
-    data.bloglar.push(yeniBlog);
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-    res.json(yeniBlog);
+    res.json({ success: true, topluluk });
 });
 
-// Blogları listeleme (sadece API anahtarı ile erişim)
+// 2. Blog Listeleme
 app.get('/api/bloglar', (req, res) => {
     const { apiKey } = req.query;
-    if (!apiKey) return res.status(400).json({ error: 'API anahtarı gerekli!' });
-
     const topluluk = dogrulaApiAnahtari(apiKey);
     if (!topluluk) {
         return res.status(403).json({ error: 'Geçersiz API anahtarı!' });
     }
-
     const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    const toplulukBloglari = data.bloglar.filter(blog => blog.toplulukIsim === topluluk.isim);
+    const toplulukBloglari = data.bloglar.filter(blog => blog.topluluk === topluluk.isim);
     res.json(toplulukBloglari);
 });
 
-// Herkese açık blogları listeleme
-app.get('/api/bloglar-herkese-acik', (req, res) => {
-    const { toplulukIsim } = req.query;
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    let bloglar = data.bloglar;
+// 3. Blog Ekleme
+app.post('/api/blog-ekle', (req, res) => {
+    const { apiKey, baslik, icerik, kategori } = req.body;
 
-    // Eğer topluluk adı verilmişse filtrele
-    if (toplulukIsim) {
-        bloglar = bloglar.filter(blog => blog.toplulukIsim === toplulukIsim);
+    // API anahtarı doğrula
+    const topluluk = dogrulaApiAnahtari(apiKey);
+    if (!topluluk) {
+        return res.status(403).json({ error: 'Geçersiz API anahtarı!' });
     }
 
-    res.json(bloglar);
+    // Yeni blog oluştur
+    const yeniBlog = {
+        id: Date.now(),
+        topluluk: topluluk.isim,
+        baslik,
+        icerik,
+        kategori,
+        tarih: new Date().toISOString(),
+    };
+
+    // Blogu kaydet
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    data.bloglar.push(yeniBlog);
+    if (!data.kategoriler) {
+        data.kategoriler = {};
+    }
+    if (!data.kategoriler[topluluk.isim]) {
+        data.kategoriler[topluluk.isim] = [];
+    }
+    if (kategori && !data.kategoriler[topluluk.isim].includes(kategori)) {
+        data.kategoriler[topluluk.isim].push(kategori);
+    }
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+
+    res.json({ success: true, blog: yeniBlog });
+});
+
+// 4. Blog Silme
+app.post('/api/blog-sil', (req, res) => {
+    const { apiKey, blogId } = req.body;
+
+    // API anahtarı doğrula
+    const topluluk = dogrulaApiAnahtari(apiKey);
+    if (!topluluk) {
+        return res.status(403).json({ error: 'Geçersiz API anahtarı!' });
+    }
+
+    // Blogu sil
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    data.bloglar = data.bloglar.filter(blog => blog.id !== parseInt(blogId));
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+
+    res.json({ success: true });
 });
 
 // Sunucuyu başlat

@@ -1,31 +1,9 @@
 {
   "topluluklar": [
-    {
-      "isim": "Topluluk1",
-      "apiKey": "12345"
-    }
+      {
+          "isim": "Test Topluluk",
+          "apiKey": "test-api-key"
+      }
   ],
-  "bloglar": [
-    {
-      "id": 1,
-      "toplulukIsim": "Topluluk1",
-      "baslik": "İlk Blog Yazım",
-      "icerik": "Bu, benim yazdığım ilk blog yazısı!",
-      "tarih": "2025-01-15T20:48:36.039Z"
-    },
-    {
-      "id": 2,
-      "toplulukIsim": "Topluluk1",
-      "baslik": "a",
-      "icerik": "b",
-      "tarih": "2025-01-15T20:49:59.585Z"
-    },
-    {
-      "id": 3,
-      "toplulukIsim": "Topluluk1",
-      "baslik": "c",
-      "icerik": "d",
-      "tarih": "2025-01-15T20:58:10.351Z"
-    }
-  ]
+  "bloglar": []
 }
