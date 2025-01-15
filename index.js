@@ -81,6 +81,38 @@ app.post('/api/blog-ekle', (req, res) => {
 
     res.json({ success: true, blog: yeniBlog });
 });
+app.post('/api/kategoriler-ekle', (req, res) => {
+    const { apiKey, kategori } = req.body;
+    const topluluk = dogrulaApiAnahtari(apiKey);
+    if (!topluluk) {
+        return res.status(403).json({ error: 'Geçersiz API anahtarı!' });
+    }
+
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    if (!data.kategoriler) {
+        data.kategoriler = {};
+    }
+    if (!data.kategoriler[topluluk.isim]) {
+        data.kategoriler[topluluk.isim] = [];
+    }
+
+    if (!data.kategoriler[topluluk.isim].includes(kategori)) {
+        data.kategoriler[topluluk.isim].push(kategori);
+        fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    }
+
+    res.json({ success: true });
+});
+app.get('/api/kategoriler', (req, res) => {
+    const { apiKey } = req.query;
+    const topluluk = dogrulaApiAnahtari(apiKey);
+    if (!topluluk) {
+        return res.status(403).json({ error: 'Geçersiz API anahtarı!' });
+    }
+    const data = JSON.parse(fs.readFileSync(DATA_FILE));
+    const kategoriler = data.kategoriler[topluluk.isim] || [];
+    res.json(kategoriler);
+});
 
 // 4. Blog Silme
 app.post('/api/blog-sil', (req, res) => {
