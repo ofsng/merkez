@@ -1,9 +1,9 @@
 {
   "topluluklar": [
-      {
-          "isim": "Test Topluluk",
-          "apiKey": "test-api-key"
-      }
+    {
+      "isim": "Test Topluluğu",
+      "apiKey": "test-api-key"
+    }
   ],
   "bloglar": []
 }
